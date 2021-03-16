@@ -12,6 +12,7 @@ GB = 1024 * 1024 * 1024
 
 
 def _check_api_key():
+    """check if api key is available in environment variables"""
     if "API_KEY" not in os.environ:
         raise ApiKeyNotFoundError(
             "API_KEY not found in environment variables. Please set it to your application ApiKey"
@@ -19,13 +20,15 @@ def _check_api_key():
 
 
 def _check_access_token():
+    """check if access token is available in environment variables"""
     if "ACCESS_TOKEN" not in os.environ:
-        raise ApiKeyNotFoundError(
+        raise AccessTokenNotFoundError(
             "ACCESS_TOKEN not found in environment variables. Please set it or use 'bdp authorize' to get the token"
         )
 
 
 def authorize_request():
+    """show the authorization link for the user to get access token"""
     _check_api_key()
     params = {
         "response_type": "token",
@@ -40,6 +43,7 @@ def authorize_request():
 
 
 def get_user_info():
+    """get basic user info like name, avatar_url, vip etc."""
     _check_access_token()
     params = {
         "method": "uinfo",
@@ -50,6 +54,7 @@ def get_user_info():
 
 
 def get_volumn_info():
+    """get volumn usage condition of the net disk"""
     _check_access_token()
     params = {
         "checkfree": 1,

@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-from pprint import pprint
 
 import click
 
@@ -13,11 +12,13 @@ def cli():
 
 @cli.command()
 def authorize():
+    """获取授权链接，授权后可获取授权码"""
     authorize_request()
 
 
 @cli.command()
 def uinfo():
+    """获取基本用户信息"""
     user_info = get_user_info()
     print(
         "用户名: {}\n头像链接: {}\nVIP: {}".format(
@@ -30,6 +31,7 @@ def uinfo():
 
 @cli.command()
 def volumn():
+    """获取网盘容量使用情况"""
     volumn_info = get_volumn_info()
     print("总容量: {}, 已使用容量: {}".format(volumn_info["total"], volumn_info["used"]))
 

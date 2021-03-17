@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
-import os
 
-APP_KEY = os.environ['AppKey']
-SECRET_KEY = os.environ['SecretKey']
-SIGN_KEY = os.environ['SignKey']
-
+KB = 1024
+MB = 1024 * 1024
+GB = 1024 * 1024 * 1024

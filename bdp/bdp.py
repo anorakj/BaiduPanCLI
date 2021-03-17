@@ -2,7 +2,13 @@
 
 import click
 
-from bdp.api import authorize_request, get_user_info, get_volumn_info
+from bdp.api import (
+    authorize_request,
+    get_user_info,
+    get_volumn_info,
+    get_file_list_info,
+)
+from bdp.format import format_user_info, format_volumn_info, format_file_list_info
 
 
 @click.group()
@@ -20,20 +26,22 @@ def authorize():
 def uinfo():
     """获取基本用户信息"""
     user_info = get_user_info()
-    print(
-        "用户名: {}\n头像链接: {}\nVIP: {}".format(
-            user_info["baidu_name"],
-            user_info["avatar_url"],
-            "是" if user_info["vip_type"] else "否",
-        )
-    )
+    print(format_user_info(user_info))
 
 
 @cli.command()
 def volumn():
     """获取网盘容量使用情况"""
     volumn_info = get_volumn_info()
-    print("总容量: {}, 已使用容量: {}".format(volumn_info["total"], volumn_info["used"]))
+    print(format_volumn_info(volumn_info))
+
+
+@cli.command()
+@click.option("-r", "--recursive", is_flag=True)
+@click.argument("directory", default="/")
+def ls(recursive, directory):
+    file_list_info = get_file_list_info(directory, recursive)
+    print(format_file_list_info(file_list_info))
 
 
 if __name__ == "__main__":

@@ -8,7 +8,8 @@ from bdp.exceptions import ApiKeyNotFoundError, AccessTokenNotFoundError
 AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
 USER_INFO_URL = "https://pan.baidu.com/rest/2.0/xpan/nas"
 VOLUMN_INFO_URL = "https://pan.baidu.com/api/quota"
-GB = 1024 * 1024 * 1024
+FILE_LIST_URL = "https://pan.baidu.com/rest/2.0/xpan/file?method=list"
+FILE_LIST_RECURSIVE_URL = "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
 
 
 def _check_api_key():
@@ -62,7 +63,24 @@ def get_volumn_info():
         "access_token": os.getenv("ACCESS_TOKEN"),
     }
     response = requests.get(VOLUMN_INFO_URL, params=params)
-    result = response.json()
-    for key in ["total", "used"]:
-        result[key] = "{}G".format(round(result[key] / GB, 1))
-    return result
+    return response.json()
+
+
+def get_file_list_info(directory, recursive=False):
+    """list directory contents"""
+    _check_access_token()
+    if recursive:
+        params = {
+            "path": directory,
+            "access_token": os.getenv("ACCESS_TOKEN"),
+            "recursion": 1
+        }
+        url = FILE_LIST_RECURSIVE_URL
+    else:
+        params = {
+            "dir": directory,
+            "access_token": os.getenv("ACCESS_TOKEN"),
+        }
+        url = FILE_LIST_URL
+    response = requests.get(url, params=params)
+    return response.json()

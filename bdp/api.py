@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+import abc
 import os
 
 import requests
@@ -9,7 +10,9 @@ AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
 USER_INFO_URL = "https://pan.baidu.com/rest/2.0/xpan/nas"
 VOLUMN_INFO_URL = "https://pan.baidu.com/api/quota"
 FILE_LIST_URL = "https://pan.baidu.com/rest/2.0/xpan/file?method=list"
-FILE_LIST_RECURSIVE_URL = "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
+FILE_LIST_RECURSIVE_URL = (
+    "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
+)
 
 
 def _check_api_key():
@@ -43,6 +46,19 @@ def authorize_request():
     print("Please click url below to get the access token: \n{}".format(url))
 
 
+class ApiRequest(abc.ABC):
+    def __init__(self):
+        self.url = None
+        self.method = requests.get
+
+    def prepare_request(self):
+        _check_api_key()
+
+    def execute_request(self, *args, **kwargs):
+        response = self.method(self.url, *args, **kwargs)
+        return response.json()
+
+
 def get_user_info():
     """get basic user info like name, avatar_url, vip etc."""
     _check_access_token()
@@ -73,7 +89,7 @@ def get_file_list_info(directory, recursive=False):
         params = {
             "path": directory,
             "access_token": os.getenv("ACCESS_TOKEN"),
-            "recursion": 1
+            "recursion": 1,
         }
         url = FILE_LIST_RECURSIVE_URL
     else:

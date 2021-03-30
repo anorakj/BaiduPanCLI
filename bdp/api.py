@@ -5,6 +5,12 @@ import os
 import requests
 
 from bdp.exceptions import ApiKeyNotFoundError, AccessTokenNotFoundError
+from bdp.formatters import (
+    UserInfoBaseFormatter,
+    VolumeInfoBaseFormatter,
+    ListInfoBaseFormatter,
+    ListInfoLongFormatter,
+)
 
 AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
 
@@ -41,9 +47,10 @@ def authorize():
 
 
 class ApiRequest(abc.ABC):
-    def __init__(self):
+    def __init__(self, formatter=None):
         self.url = None
         self.params = None
+        self.formatter = formatter
         self.method = requests.get
 
     def prepare(self):
@@ -52,14 +59,14 @@ class ApiRequest(abc.ABC):
     def execute(self):
         self.prepare()
         response = self.method(self.url, self.params)
-        return response.json()
+        return self.formatter().format(response.json())
 
 
 class UserInfoRequest(ApiRequest):
     """get basic user info like name, avatar_url, vip etc."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, formatter=UserInfoBaseFormatter):
+        super().__init__(formatter)
         self.params = {}
         self.url = "https://pan.baidu.com/rest/2.0/xpan/nas"
 
@@ -71,11 +78,11 @@ class UserInfoRequest(ApiRequest):
         }
 
 
-class VolumnInfoRequest(ApiRequest):
+class VolumeInfoRequest(ApiRequest):
     """"get volumn usage condition of the net disk"""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, formatter=VolumeInfoBaseFormatter):
+        super().__init__(formatter)
         self.params = {}
         self.url = "https://pan.baidu.com/api/quota"
 
@@ -88,18 +95,19 @@ class VolumnInfoRequest(ApiRequest):
         }
 
 
-def create_list_request(directory, recursive=False):
+def create_list_request(directory, long_format, recursive):
+    formatter = ListInfoLongFormatter if long_format else ListInfoBaseFormatter
     if recursive:
-        return RecursiveListRequest(directory)
+        return RecursiveListRequest(directory, formatter)
     else:
-        return ListRequest(directory)
+        return ListRequest(directory, formatter)
 
 
 class ListRequest(ApiRequest):
     """list directory contents"""
 
-    def __init__(self, directory):
-        super().__init__()
+    def __init__(self, directory, formatter):
+        super().__init__(formatter)
         self.directory = directory
         self.params = None
         self.url = "https://pan.baidu.com/rest/2.0/xpan/file?method=list"
@@ -115,8 +123,8 @@ class ListRequest(ApiRequest):
 class RecursiveListRequest(ListRequest):
     """recursive list direcotry contents"""
 
-    def __init__(self, directory):
-        super().__init__(directory)
+    def __init__(self, directory, formatter):
+        super().__init__(directory, formatter)
         self.url = "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
 
     def prepare(self):

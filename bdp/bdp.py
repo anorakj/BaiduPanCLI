@@ -5,10 +5,9 @@ import click
 from bdp.api import (
     authorize,
     UserInfoRequest,
-    VolumnInfoRequest,
+    VolumeInfoRequest,
     create_list_request,
 )
-from bdp.format import format_user_info, format_volumn_info, format_file_list_info
 
 
 @click.group()
@@ -25,23 +24,21 @@ def authorize():
 @cli.command()
 def uinfo():
     """获取基本用户信息"""
-    user_info = UserInfoRequest().execute()
-    print(format_user_info(user_info))
+    print(UserInfoRequest().execute())
 
 
 @cli.command()
-def volumn():
+def volume():
     """获取网盘容量使用情况"""
-    volumn_info = VolumnInfoRequest().execute()
-    print(format_volumn_info(volumn_info))
+    print(VolumeInfoRequest().execute())
 
 
 @cli.command()
-@click.option("-r", "--recursive", is_flag=True)
 @click.argument("directory", default="/")
-def ls(recursive, directory):
-    file_list_info = create_list_request(directory, recursive).execute()
-    print(format_file_list_info(file_list_info))
+@click.option("-l", "--long_format", is_flag=True)
+@click.option("-r", "--recursive", is_flag=True)
+def ls(directory, long_format, recursive):
+    print(create_list_request(directory, long_format, recursive).execute())
 
 
 if __name__ == "__main__":

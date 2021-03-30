@@ -7,12 +7,6 @@ import requests
 from bdp.exceptions import ApiKeyNotFoundError, AccessTokenNotFoundError
 
 AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
-USER_INFO_URL = "https://pan.baidu.com/rest/2.0/xpan/nas"
-VOLUMN_INFO_URL = "https://pan.baidu.com/api/quota"
-FILE_LIST_URL = "https://pan.baidu.com/rest/2.0/xpan/file?method=list"
-FILE_LIST_RECURSIVE_URL = (
-    "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
-)
 
 
 def _check_api_key():
@@ -31,7 +25,7 @@ def _check_access_token():
         )
 
 
-def authorize_request():
+def authorize():
     """show the authorization link for the user to get access token"""
     _check_api_key()
     params = {
@@ -49,54 +43,86 @@ def authorize_request():
 class ApiRequest(abc.ABC):
     def __init__(self):
         self.url = None
+        self.params = None
         self.method = requests.get
 
-    def prepare_request(self):
+    def prepare(self):
         _check_api_key()
 
-    def execute_request(self, *args, **kwargs):
-        response = self.method(self.url, *args, **kwargs)
+    def execute(self):
+        self.prepare()
+        response = self.method(self.url, self.params)
         return response.json()
 
 
-def get_user_info():
+class UserInfoRequest(ApiRequest):
     """get basic user info like name, avatar_url, vip etc."""
-    _check_access_token()
-    params = {
-        "method": "uinfo",
-        "access_token": os.getenv("ACCESS_TOKEN"),
-    }
-    response = requests.get(USER_INFO_URL, params=params)
-    return response.json()
+
+    def __init__(self):
+        super().__init__()
+        self.params = {}
+        self.url = "https://pan.baidu.com/rest/2.0/xpan/nas"
+
+    def prepare(self):
+        super().prepare()
+        self.params = {
+            "method": "uinfo",
+            "access_token": os.getenv("ACCESS_TOKEN"),
+        }
 
 
-def get_volumn_info():
-    """get volumn usage condition of the net disk"""
-    _check_access_token()
-    params = {
-        "checkfree": 1,
-        "checkexpire": 1,
-        "access_token": os.getenv("ACCESS_TOKEN"),
-    }
-    response = requests.get(VOLUMN_INFO_URL, params=params)
-    return response.json()
+class VolumnInfoRequest(ApiRequest):
+    """"get volumn usage condition of the net disk"""
+
+    def __init__(self):
+        super().__init__()
+        self.params = {}
+        self.url = "https://pan.baidu.com/api/quota"
+
+    def prepare(self):
+        super().prepare()
+        self.params = {
+            "checkfree": 1,
+            "checkexpire": 1,
+            "access_token": os.getenv("ACCESS_TOKEN"),
+        }
 
 
-def get_file_list_info(directory, recursive=False):
-    """list directory contents"""
-    _check_access_token()
+def create_list_request(directory, recursive=False):
     if recursive:
-        params = {
-            "path": directory,
+        return RecursiveListRequest(directory)
+    else:
+        return ListRequest(directory)
+
+
+class ListRequest(ApiRequest):
+    """list directory contents"""
+
+    def __init__(self, directory):
+        super().__init__()
+        self.directory = directory
+        self.params = None
+        self.url = "https://pan.baidu.com/rest/2.0/xpan/file?method=list"
+
+    def prepare(self):
+        super().prepare()
+        self.params = {
+            "dir": self.directory,
+            "access_token": os.getenv("ACCESS_TOKEN"),
+        }
+
+
+class RecursiveListRequest(ListRequest):
+    """recursive list direcotry contents"""
+
+    def __init__(self, directory):
+        super().__init__(directory)
+        self.url = "https://pan.baidu.com/rest/2.0/xpan/multimedia?method=listall"
+
+    def prepare(self):
+        super(ListRequest, self).prepare()
+        self.params = {
+            "path": self.directory,
             "access_token": os.getenv("ACCESS_TOKEN"),
             "recursion": 1,
         }
-        url = FILE_LIST_RECURSIVE_URL
-    else:
-        params = {
-            "dir": directory,
-            "access_token": os.getenv("ACCESS_TOKEN"),
-        }
-        url = FILE_LIST_URL
-    response = requests.get(url, params=params)
-    return response.json()

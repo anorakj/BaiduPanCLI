@@ -6,10 +6,9 @@ from datetime import datetime
 from bdp.utils import byte2kmg
 
 
-class Formatter(abc.ABC):
-    @abc.abstractmethod
+class Formatter(object):
     def format(self, data):
-        pass
+        return str(data)
 
 
 class UserInfoBaseFormatter(Formatter):

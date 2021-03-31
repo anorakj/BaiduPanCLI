@@ -6,6 +6,7 @@ import requests
 
 from bdp.exceptions import ApiKeyNotFoundError, AccessTokenNotFoundError
 from bdp.formatters import (
+    Formatter,
     UserInfoBaseFormatter,
     VolumeInfoBaseFormatter,
     ListInfoBaseFormatter,
@@ -47,22 +48,44 @@ def authorize():
 
 
 class ApiRequest(abc.ABC):
-    def __init__(self, formatter=None):
+    def __init__(self, formatter=Formatter):
+        self.method = None
         self.url = None
         self.params = None
+        self.files = None
+        self.data = None
+        self.headers = None
         self.formatter = formatter
-        self.method = requests.get
 
     def prepare(self):
         _check_api_key()
 
     def execute(self):
         self.prepare()
-        response = self.method(self.url, self.params)
+        response = requests.request(
+            self.method,
+            self.url,
+            params = self.params,
+            data=self.data,
+            files=self.files,
+            headers=self.headers,
+        )
         return self.formatter().format(response.json())
 
 
-class UserInfoRequest(ApiRequest):
+class GetApiRequest(ApiRequest, abc.ABC):
+    def __init__(self, formatter=Formatter):
+        super().__init__(formatter)
+        self.method = "GET"
+
+
+class PostApiRequest(ApiRequest, abc.ABC):
+    def __init__(self, formatter=Formatter):
+        super().__init__(formatter)
+        self.method = "POST"
+
+
+class UserInfoRequest(GetApiRequest):
     """get basic user info like name, avatar_url, vip etc."""
 
     def __init__(self, formatter=UserInfoBaseFormatter):
@@ -78,7 +101,7 @@ class UserInfoRequest(ApiRequest):
         }
 
 
-class VolumeInfoRequest(ApiRequest):
+class VolumeInfoRequest(GetApiRequest):
     """"get volumn usage condition of the net disk"""
 
     def __init__(self, formatter=VolumeInfoBaseFormatter):
@@ -103,7 +126,7 @@ def create_list_request(directory, long_format, recursive):
         return ListRequest(directory, formatter)
 
 
-class ListRequest(ApiRequest):
+class ListRequest(GetApiRequest):
     """list directory contents"""
 
     def __init__(self, directory, formatter):

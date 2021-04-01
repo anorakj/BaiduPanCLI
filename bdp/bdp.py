@@ -7,6 +7,8 @@ from bdp.api import (
     UserInfoRequest,
     VolumeInfoRequest,
     create_list_request,
+    PrecreateRequest,
+    CreateRequest,
 )
 
 
@@ -39,6 +41,14 @@ def volume():
 @click.option("-r", "--recursive", is_flag=True)
 def ls(directory, long_format, recursive):
     print(create_list_request(directory, long_format, recursive).execute())
+
+
+@cli.command()
+@click.argument("directory")
+def mkdir(directory):
+    pr = PrecreateRequest("", directory)
+    pr.execute()
+    CreateRequest(pr).execute()
 
 
 if __name__ == "__main__":

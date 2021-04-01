@@ -7,3 +7,7 @@ class ApiKeyNotFoundError(Exception):
 
 class AccessTokenNotFoundError(Exception):
     pass
+
+
+class BdpFolderNotFoundError(Exception):
+    pass

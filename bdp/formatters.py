@@ -8,7 +8,7 @@ from bdp.utils import byte2kmg
 
 class Formatter(object):
     def format(self, data):
-        return str(data)
+        return data
 
 
 class UserInfoBaseFormatter(Formatter):

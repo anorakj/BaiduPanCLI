@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 
-KB = 1024
-MB = 1024 * 1024
-GB = 1024 * 1024 * 1024
+KB = int(1e3)
+MB = int(1e6)
+GB = int(1e9)

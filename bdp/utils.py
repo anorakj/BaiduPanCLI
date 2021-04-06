@@ -6,7 +6,7 @@ import os
 from bdp.constants import KB, MB, GB
 
 
-def byte2kmg(nbyte, precision=1):
+def byte2kmg(nbyte, precision=2):
     """change byte into KB, MB or GB according to its number"""
     if nbyte < MB:
         return str(round(nbyte / KB, precision)) + "KB"

@@ -8,6 +8,7 @@ from bdp.api import (
     VolumeInfoRequest,
     create_list_request,
     PrecreateRequest,
+    UploadRequest,
     CreateRequest,
 )
 
@@ -46,8 +47,17 @@ def ls(directory, long_format, recursive):
 @cli.command()
 @click.argument("directory")
 def mkdir(directory):
-    pr = PrecreateRequest("", directory)
+    pr = PrecreateRequest(directory)
     pr.execute()
+    CreateRequest(pr).execute()
+
+@cli.command()
+@click.argument("local_path")
+@click.argument("remote_path")
+def upload(local_path, remote_path):
+    pr = PrecreateRequest(remote_path, local_path)
+    pr.execute()
+    UploadRequest(pr).execute()
     CreateRequest(pr).execute()
 
 

@@ -2,6 +2,7 @@
 import abc
 import os
 import json
+from tempfile import TemporaryDirectory
 
 import requests
 
@@ -17,6 +18,7 @@ from bdp.formatters import (
     ListInfoBaseFormatter,
     ListInfoLongFormatter,
 )
+from bdp.utils import slice_file
 
 AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
 
@@ -176,15 +178,20 @@ class RecursiveListRequest(ListRequest):
 class PrecreateRequest(PostApiRequest):
     """get uploadid from pan"""
 
-    def __init__(self, local_path, remote_path):
+    def __init__(self, remote_path, local_path=""):
         super().__init__()
         self.url = "https://pan.baidu.com/rest/2.0/xpan/file?method=precreate"
         self.local_path = local_path
         self.remote_path = remote_path
         self.uploadid = None
+        self.tempdir = None
+        self.files_info = None
 
     def prepare(self):
         super().prepare()
+        if self.local_path:
+            self.tempdir = TemporaryDirectory()
+            self.files_info = slice_file(self.local_path, self.tempdir.name)
         self.params = {
             "access_token": os.getenv("ACCESS_TOKEN"),
         }
@@ -193,7 +200,9 @@ class PrecreateRequest(PostApiRequest):
             "size": 0 if not self.local_path else os.path.getsize(self.local_path),
             "isdir": 1 if not self.local_path else 0,
             "autoinit": 1,
-            "block_list": [],
+            "block_list": json.dumps([x["md5"] for x in self.files_info])
+            if self.files_info
+            else [],
         }
 
     def execute(self):
@@ -203,6 +212,34 @@ class PrecreateRequest(PostApiRequest):
             return
         result = super().execute()
         self.uploadid = result["uploadid"]
+
+
+class UploadRequest(PostApiRequest):
+    def __init__(self, precreate_request):
+        super().__init__()
+        self.url = "https://d.pcs.baidu.com/rest/2.0/pcs/superfile2?method=upload"
+        self.precreate_request = precreate_request
+        self.partseq = None
+
+    def prepare(self):
+        super().prepare()
+        self.params = {
+            "access_token": os.getenv("ACCESS_TOKEN"),
+            "method": "upload",
+            "type": "tmpfile",
+            "path": self.precreate_request.data["path"],
+            "uploadid": self.precreate_request.uploadid,
+            "partseq": self.partseq,
+        }
+
+    def execute(self):
+        self.prepare()
+        for partseq, file_info in enumerate(self.precreate_request.files_info):
+            self.partseq = partseq
+            self.files = [(file_info["path"], open(file_info["path"], "rb"))]
+            super().execute()
+
+        self.precreate_request.tempdir.cleanup()
 
 
 class CreateRequest(PostApiRequest):

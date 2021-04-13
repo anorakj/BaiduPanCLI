@@ -2,6 +2,7 @@
 import hashlib
 import math
 import os
+from tempfile import TemporaryDirectory
 
 from bdp.constants import KB, MB, GB
 
@@ -31,3 +32,25 @@ def slice_file(file_path, des_directory, chunk_size=4 * MB):
                 chunk_f.write(chunk)
             files.append(file_info)
     return files
+
+
+class SliceFileManager(object):
+    """manage file slicing and cleaning locally"""
+
+    def __init__(self, target_file_path, chunk_size=4 * MB):
+        self.target_file_path = target_file_path
+        self.sliced = False
+        self.chunk_size = chunk_size
+        self._sliced_files_info = []
+        self._tempdir = None
+
+    @property
+    def sliced_files_info(self):
+        if not self.sliced:
+            self._tempdir = TemporaryDirectory()
+            self._sliced_files_info = slice_file(self.target_file_path, self._tempdir.name, chunk_size=self.chunk_size)
+            self.sliced = True
+        return self._sliced_files_info
+
+    def cleanup(self):
+        self._tempdir.cleanup()

@@ -2,9 +2,9 @@
 import abc
 import os
 import json
-from tempfile import TemporaryDirectory
 
 import requests
+from tqdm import tqdm
 
 from bdp.exceptions import (
     ApiKeyNotFoundError,
@@ -18,7 +18,7 @@ from bdp.formatters import (
     ListInfoBaseFormatter,
     ListInfoLongFormatter,
 )
-from bdp.utils import slice_file
+from bdp.utils import SliceFileManager
 
 AUTHORIZE_URL = "http://openapi.baidu.com/oauth/2.0/authorize"
 
@@ -184,14 +184,10 @@ class PrecreateRequest(PostApiRequest):
         self.local_path = local_path
         self.remote_path = remote_path
         self.uploadid = None
-        self.tempdir = None
-        self.files_info = None
+        self.file_manager = SliceFileManager(local_path) if local_path else None
 
     def prepare(self):
         super().prepare()
-        if self.local_path:
-            self.tempdir = TemporaryDirectory()
-            self.files_info = slice_file(self.local_path, self.tempdir.name)
         self.params = {
             "access_token": os.getenv("ACCESS_TOKEN"),
         }
@@ -200,8 +196,8 @@ class PrecreateRequest(PostApiRequest):
             "size": 0 if not self.local_path else os.path.getsize(self.local_path),
             "isdir": 1 if not self.local_path else 0,
             "autoinit": 1,
-            "block_list": json.dumps([x["md5"] for x in self.files_info])
-            if self.files_info
+            "block_list": json.dumps([x["md5"] for x in self.file_manager.sliced_files_info])
+            if self.file_manager
             else [],
         }
 
@@ -234,12 +230,16 @@ class UploadRequest(PostApiRequest):
 
     def execute(self):
         self.prepare()
-        for partseq, file_info in enumerate(self.precreate_request.files_info):
+        for partseq, file_info in tqdm(
+            enumerate(self.precreate_request.file_manager.sliced_files_info),
+            "Uploading file slices",
+            total=len(self.precreate_request.file_manager.sliced_files_info),
+        ):
             self.partseq = partseq
             self.files = [(file_info["path"], open(file_info["path"], "rb"))]
             super().execute()
 
-        self.precreate_request.tempdir.cleanup()
+        self.precreate_request.file_manager.cleanup()
 
 
 class CreateRequest(PostApiRequest):
